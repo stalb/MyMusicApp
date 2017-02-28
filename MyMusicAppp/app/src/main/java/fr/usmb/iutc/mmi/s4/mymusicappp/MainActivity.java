@@ -37,6 +37,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Button bRequestFocus = (Button) this.findViewById(R.id.buttonRequestFocus);
         Button bAbandonFocus = (Button) this.findViewById(R.id.buttonAabandonFocus);
+        Button bPause = (Button) this.findViewById(R.id.buttonPause);
+        Button bRestart = (Button) this.findViewById(R.id.buttonRestart);
+        Button bStop = (Button) this.findViewById(R.id.buttonStop);
         Button b1 = (Button) this.findViewById(R.id.button1);
         b1.setOnClickListener(new ButtonListener(this, 1));
         Button b2 = (Button) this.findViewById(R.id.button2);
@@ -49,6 +52,24 @@ public class MainActivity extends AppCompatActivity {
         b5.setOnClickListener(new ButtonListener(this, 5));
         Button b6 = (Button) this.findViewById(R.id.button6);
         b6.setOnClickListener(new ButtonListener(this, 6));
+        bPause.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                pauseAll();
+            }
+        });
+        bStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                stopAll();
+            }
+        });
+        bRestart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                restart();
+            }
+        });
         this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
         audioBroacastReceiver = new MyAudioBroadcastReceiver(this);
         this.registerReceiver(audioBroacastReceiver, noisyFilter);
