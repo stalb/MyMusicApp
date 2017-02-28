@@ -27,32 +27,38 @@ public class AudioFocusListener implements AudioManager.OnAudioFocusChangeListen
                 app.pauseAll();
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK :
-                app.pauseAll();
+                app.duckAll();
                 break;
             case AudioManager.AUDIOFOCUS_GAIN :
+                app.unduckAll();
                 app.restart();
                 break;
         }
     }
 
-    public boolean hasFocus(){
+    public boolean hasAudioFocus(){
         System.out.println("hasFocus: " + audioState);
         return (audioState == AudioManager.AUDIOFOCUS_GAIN);
     }
 
     public boolean hasOrRequestAudioFocus(){
-        System.out.println("hasOrRequestAudioFocus " + this.hasFocus());
-        return (this.hasFocus() || this.requestFocus());
+        System.out.println("hasOrRequestAudioFocus " + this.hasAudioFocus());
+        return (this.hasAudioFocus() || this.requestAudioFocus());
     }
 
-    public boolean requestFocus(){
+    public boolean requestAudioFocus(){
         int res;
-        res =  am.requestAudioFocus(this,AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN);
+        res =  am.requestAudioFocus(this,AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
         if (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             audioState = AudioManager.AUDIOFOCUS_GAIN;
+            app.unduckAll();
             app.restart();
         }
-        return this.hasFocus();
+        return this.hasAudioFocus();
     }
-
+    public void abandonAudioFocus(){
+        am.abandonAudioFocus(this);
+        this.audioState = AudioManager.AUDIOFOCUS_LOSS;
+        app.pauseAll();
+    }
 }

@@ -1,28 +1,22 @@
 package fr.usmb.iutc.mmi.s4.mymusicappp;
 
 import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
-import android.media.SoundPool;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 
-import com.google.android.gms.appindexing.Action;
-import com.google.android.gms.appindexing.AppIndex;
-import com.google.android.gms.appindexing.Thing;
 import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -31,12 +25,9 @@ public class MainActivity extends AppCompatActivity {
      * See https://g.co/AppIndexing/AndroidStudio for more information.
      */
     private GoogleApiClient client;
-    private Ringtone[]  sons = new Ringtone[10];
     private MediaPlayer[]  mps = new MediaPlayer[10];
-    //private SoundPool soundPool;
     private IntentFilter noisyFilter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
     private BroadcastReceiver audioBroacastReceiver ;
-//    private List<Ringtone> onPause= new LinkedList<>();
     private List<MediaPlayer> onPause= new LinkedList<>();
     private AudioFocusListener afl;
 
@@ -44,16 +35,36 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Button bRequestFocus = (Button) this.findViewById(R.id.buttonRequestFocus);
+        Button bAbandonFocus = (Button) this.findViewById(R.id.buttonAabandonFocus);
         Button b1 = (Button) this.findViewById(R.id.button1);
         b1.setOnClickListener(new ButtonListener(this, 1));
         Button b2 = (Button) this.findViewById(R.id.button2);
         b2.setOnClickListener(new ButtonListener(this, 2));
-        // SoundPool.Builder  builder = new SoundPool.Builder();
-        //soundPool = new SoundPool(5, AudioManager.STREAM_MUSIC, 0);
+        Button b3 = (Button) this.findViewById(R.id.button3);
+        b3.setOnClickListener(new ButtonListener(this, 3));
+        Button b4 = (Button) this.findViewById(R.id.button4);
+        b4.setOnClickListener(new ButtonListener(this, 4));
+        Button b5 = (Button) this.findViewById(R.id.button5);
+        b5.setOnClickListener(new ButtonListener(this, 5));
+        Button b6 = (Button) this.findViewById(R.id.button6);
+        b6.setOnClickListener(new ButtonListener(this, 6));
         this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
         audioBroacastReceiver = new MyAudioBroadcastReceiver(this);
         this.registerReceiver(audioBroacastReceiver, noisyFilter);
         afl = new AudioFocusListener(this);
+        bAbandonFocus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                afl.abandonAudioFocus();
+            }
+        });
+        bRequestFocus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                afl.requestAudioFocus();
+            }
+        });
     }
 
     @Override
@@ -69,30 +80,23 @@ public class MainActivity extends AppCompatActivity {
         Ringtone son = RingtoneManager.getRingtone(this, uri);
         MediaPlayer mp = MediaPlayer.create(this, uri);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        sons[id-1] = son;
+        //mp.setLooping(false);
         mps[id-1] = mp;
         if (son != null){
-            son.setStreamType(AudioManager.STREAM_MUSIC);
-            switch (id){
-                case 1 : ((Button) this.findViewById(R.id.button1)).setText(son.getTitle(this)); break;
-                case 2 : ((Button) this.findViewById(R.id.button2)).setText(son.getTitle(this)); break;
+             switch (id){
+                 case 1 : ((Button) this.findViewById(R.id.button1)).setText(son.getTitle(this)); break;
+                 case 2 : ((Button) this.findViewById(R.id.button2)).setText(son.getTitle(this)); break;
+                 case 3 : ((Button) this.findViewById(R.id.button3)).setText(son.getTitle(this)); break;
+                 case 4 : ((Button) this.findViewById(R.id.button4)).setText(son.getTitle(this)); break;
+                 case 5 : ((Button) this.findViewById(R.id.button5)).setText(son.getTitle(this)); break;
+                 case 6 : ((Button) this.findViewById(R.id.button6)).setText(son.getTitle(this)); break;
             }
         }
     }
-    public Ringtone getSon(int id){
-        return sons[id-1];
+    public MediaPlayer getSon(int id){
+        return mps[id-1];
     }
     public void playOrStop(int i){
-//        if (sons[ i-1] != null) {
-//            if ( ! sons[i-1].isPlaying()){
-//                if (afl.hasOrRequestAudioFocus() ) {
-//                    System.out.println("play "+i);
-//                    sons[i-1].play();
-//                }
-//            } else {
-//                sons[i-1].stop();
-//            }
-//        }
         if (mps[ i-1] != null) {
             if ( ! mps[i-1].isPlaying()){
                 if (afl.hasOrRequestAudioFocus() ) {
@@ -100,48 +104,92 @@ public class MainActivity extends AppCompatActivity {
                     mps[i-1].start();
                 }
             } else {
+                System.out.println("pause "+i);
                 mps[i-1].pause();
             }
         }
     }
     public void stopAll(){
         System.out.println("stop all");
-//        for (Ringtone son : sons ){
-//            if (son != null){
-//                son.stop();
-//            }
-//        }
+        onPause.clear();
         for (MediaPlayer son : mps ){
             if (son != null){
-                son.reset();
+                son.pause();
+                son.seekTo(0);
             }
         }
     }
     public void pauseAll(){
         System.out.println("pause all");
-//        for (Ringtone son : sons ){
-//            if (son != null){
-//                son.stop();
-//                onPause.add(son);
-//            }
-//        }
         for (MediaPlayer son : mps ){
-            if (son != null){
+            if (son != null && son.isPlaying()){
                 son.pause();
                 onPause.add(son);
             }
         }
     }
+    public void duckAll(){
+        System.out.println("duck all");
+        for (MediaPlayer son : mps ){
+            if (son != null ){
+                son.setVolume(0.2f, 0.2f);
+            }
+        }
+    }
+    public void unduckAll(){
+        System.out.println("duck all");
+        for (MediaPlayer son : mps ){
+            if (son != null ){
+                son.setVolume(1f, 1f);
+            }
+        }
+    }
     public void restart(){
-        if (afl.hasOrRequestAudioFocus()) {
+        if (afl.hasAudioFocus()) {
             System.out.println("restart all");
-//            for (Ringtone son : onPause) {
-//                son.play();
-//            }
             for (MediaPlayer son : onPause) {
                 son.start();
             }
             onPause.clear();
         }
+    }
+
+    public void cleanAllMps(){
+        for (int i=0; i< mps.length; i++){
+            if (mps[i] != null){
+                mps[i].reset();
+                mps[i].release();
+                mps[i] = null;
+            }
+        }
+    }
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        this.cleanAllMps();
+        afl.abandonAudioFocus();
+        this.unregisterReceiver(audioBroacastReceiver);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        this.pauseAll();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        this.restart();
     }
 }
