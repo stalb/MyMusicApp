@@ -26,10 +26,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private GoogleApiClient client;
     private MediaPlayer[]  mps = new MediaPlayer[10];
-    private IntentFilter noisyFilter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
-    private BroadcastReceiver audioBroacastReceiver ;
     private List<MediaPlayer> onPause= new LinkedList<>();
-    private AudioFocusListener afl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,22 +67,6 @@ public class MainActivity extends AppCompatActivity {
                 restart();
             }
         });
-        this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
-        audioBroacastReceiver = new MyAudioBroadcastReceiver(this);
-        this.registerReceiver(audioBroacastReceiver, noisyFilter);
-        afl = new AudioFocusListener(this);
-        bAbandonFocus.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                afl.abandonAudioFocus();
-            }
-        });
-        bRequestFocus.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                afl.requestAudioFocus();
-            }
-        });
     }
 
     @Override
@@ -120,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
     public void playOrStop(int i){
         if (mps[ i-1] != null) {
             if ( ! mps[i-1].isPlaying()){
-                if (afl.hasOrRequestAudioFocus() ) {
+                {
                     System.out.println("play "+i);
                     mps[i-1].start();
                 }
@@ -166,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     public void restart(){
-        if (afl.hasAudioFocus()) {
+        {
             System.out.println("restart all");
             for (MediaPlayer son : onPause) {
                 son.start();
@@ -190,27 +171,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() { super.onResume(); }
+
+    @Override
+    protected void onPause() { super.onPause(); }
+
+    @Override
     protected void onStop() {
         super.onStop();
     }
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
         this.cleanAllMps();
-        afl.abandonAudioFocus();
-        this.unregisterReceiver(audioBroacastReceiver);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        this.pauseAll();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        this.restart();
+        super.onDestroy();
     }
 }
