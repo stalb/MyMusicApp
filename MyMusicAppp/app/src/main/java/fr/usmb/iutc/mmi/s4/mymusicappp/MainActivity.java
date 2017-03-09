@@ -86,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
                 afl.requestAudioFocus();
             }
         });
+        this.setSon(1, Uri.parse(this.getString(R.string.sound1)));
     }
 
     @Override
