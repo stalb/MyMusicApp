@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
+import android.media.MediaMetadata;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
@@ -98,19 +100,20 @@ public class MainActivity extends AppCompatActivity {
 
     public void setSon(int id, Uri uri){
         System.out.println("URI : "+uri.toString());
-        Ringtone son = RingtoneManager.getRingtone(this, uri);
+        MediaMetadataRetriever dataManager = new MediaMetadataRetriever();
+        dataManager.setDataSource(this, uri);
+        String title = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
         MediaPlayer mp = MediaPlayer.create(this, uri);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        //mp.setLooping(false);
         mps[id-1] = mp;
-        if (son != null){
+        if (title != null){
              switch (id){
-                 case 1 : ((Button) this.findViewById(R.id.button1)).setText(son.getTitle(this)); break;
-                 case 2 : ((Button) this.findViewById(R.id.button2)).setText(son.getTitle(this)); break;
-                 case 3 : ((Button) this.findViewById(R.id.button3)).setText(son.getTitle(this)); break;
-                 case 4 : ((Button) this.findViewById(R.id.button4)).setText(son.getTitle(this)); break;
-                 case 5 : ((Button) this.findViewById(R.id.button5)).setText(son.getTitle(this)); break;
-                 case 6 : ((Button) this.findViewById(R.id.button6)).setText(son.getTitle(this)); break;
+                 case 1 : ((Button) this.findViewById(R.id.button1)).setText(title); break;
+                 case 2 : ((Button) this.findViewById(R.id.button2)).setText(title); break;
+                 case 3 : ((Button) this.findViewById(R.id.button3)).setText(title); break;
+                 case 4 : ((Button) this.findViewById(R.id.button4)).setText(title); break;
+                 case 5 : ((Button) this.findViewById(R.id.button5)).setText(title); break;
+                 case 6 : ((Button) this.findViewById(R.id.button6)).setText(title); break;
             }
         }
     }
