@@ -10,6 +10,8 @@ import android.media.MediaPlayer;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -17,8 +19,13 @@ import android.widget.Button;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 
+import java.io.File;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -88,7 +95,14 @@ public class MainActivity extends AppCompatActivity {
                 afl.requestAudioFocus();
             }
         });
+        System.out.println("Son1 - URI: " + this.getString(R.string.sound1));
         this.setSon(1, Uri.parse(this.getString(R.string.sound1)));
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_MUSIC), "mp3/Adele/25/01 - Hello.mp3");
+        System.out.println("Son2 - path: " + file);
+        Uri son2 = Uri.fromFile(file);
+        this.setSon(2, son2);
+
     }
 
     @Override
@@ -102,8 +116,15 @@ public class MainActivity extends AppCompatActivity {
     public void setSon(int id, Uri uri){
         System.out.println("URI : "+uri.toString());
         MediaMetadataRetriever dataManager = new MediaMetadataRetriever();
-        dataManager.setDataSource(this, uri);
+        if ("file".equalsIgnoreCase(uri.getScheme()) || "content".equalsIgnoreCase(uri.getScheme())){
+            dataManager.setDataSource(this, uri);
+        } else {
+            dataManager.setDataSource(uri.toString(), new HashMap<String, String>());
+        }
+//        dataManager.setDataSource(this, uri);
         String title = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+        String author = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+        title= title + "/" + author;
         MediaPlayer mp = MediaPlayer.create(this, uri);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
         mps[id-1] = mp;
