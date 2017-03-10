@@ -96,24 +96,36 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         System.out.println("Son1 - URI: " + this.getString(R.string.sound1));
-        this.setSon(1, Uri.parse(this.getString(R.string.sound1)));
+        Uri son1 = Uri.parse(this.getString(R.string.sound1));
+        this.setSon(1, son1);
+        this.setButtonTitle(1, son1);
         File file = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_MUSIC), "mp3/Adele/25/01 - Hello.mp3");
+                Environment.DIRECTORY_MUSIC), this.getString(R.string.sound2));
         System.out.println("Son2 - path: " + file);
         Uri son2 = Uri.fromFile(file);
         this.setSon(2, son2);
-
+        this.setButtonTitle(2, son2);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
             Uri uri = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
-            if (uri != null) this.setSon(requestCode, uri);
+            if (uri != null) {
+                this.setSon(requestCode, uri);
+                this.setButtonTitle(requestCode, uri);
+            }
         }
     }
 
     public void setSon(int id, Uri uri){
+        System.out.println("URI : "+uri.toString());
+        MediaPlayer mp = MediaPlayer.create(this, uri);
+        mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        mps[id-1] = mp;
+    }
+
+    public void setButtonTitle(int id, Uri uri){
         System.out.println("URI : "+uri.toString());
         MediaMetadataRetriever dataManager = new MediaMetadataRetriever();
         if ("file".equalsIgnoreCase(uri.getScheme()) || "content".equalsIgnoreCase(uri.getScheme())){
@@ -121,21 +133,17 @@ public class MainActivity extends AppCompatActivity {
         } else {
             dataManager.setDataSource(uri.toString(), new HashMap<String, String>());
         }
-//        dataManager.setDataSource(this, uri);
-        String title = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
-        String author = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
-        title= title + "/" + author;
-        MediaPlayer mp = MediaPlayer.create(this, uri);
-        mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        mps[id-1] = mp;
+        String trackTitle = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+        String trackAuthor = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+        String title= ((trackTitle != null) ? trackTitle : "inconnu" )+ " / " + ((trackAuthor != null) ? trackAuthor : "inconnu" );
         if (title != null){
-             switch (id){
-                 case 1 : ((Button) this.findViewById(R.id.button1)).setText(title); break;
-                 case 2 : ((Button) this.findViewById(R.id.button2)).setText(title); break;
-                 case 3 : ((Button) this.findViewById(R.id.button3)).setText(title); break;
-                 case 4 : ((Button) this.findViewById(R.id.button4)).setText(title); break;
-                 case 5 : ((Button) this.findViewById(R.id.button5)).setText(title); break;
-                 case 6 : ((Button) this.findViewById(R.id.button6)).setText(title); break;
+            switch (id){
+                case 1 : ((Button) this.findViewById(R.id.button1)).setText(title); break;
+                case 2 : ((Button) this.findViewById(R.id.button2)).setText(title); break;
+                case 3 : ((Button) this.findViewById(R.id.button3)).setText(title); break;
+                case 4 : ((Button) this.findViewById(R.id.button4)).setText(title); break;
+                case 5 : ((Button) this.findViewById(R.id.button5)).setText(title); break;
+                case 6 : ((Button) this.findViewById(R.id.button6)).setText(title); break;
             }
         }
     }
