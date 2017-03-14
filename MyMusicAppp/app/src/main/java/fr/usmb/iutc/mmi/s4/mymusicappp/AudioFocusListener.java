@@ -36,6 +36,10 @@ public class AudioFocusListener implements AudioManager.OnAudioFocusChangeListen
         }
     }
 
+    public boolean canDuck() {
+        System.out.println("canduck: " + audioState);
+        return (audioState == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK);
+    }
     public boolean hasAudioFocus(){
         System.out.println("hasFocus: " + audioState);
         return (audioState == AudioManager.AUDIOFOCUS_GAIN);
@@ -52,7 +56,7 @@ public class AudioFocusListener implements AudioManager.OnAudioFocusChangeListen
         if (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             audioState = AudioManager.AUDIOFOCUS_GAIN;
             app.unduckAll();
-            app.restart();
+            //app.restart();
         }
         return this.hasAudioFocus();
     }
