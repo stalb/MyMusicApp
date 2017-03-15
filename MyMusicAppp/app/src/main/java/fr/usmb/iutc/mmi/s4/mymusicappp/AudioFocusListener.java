@@ -52,7 +52,7 @@ public class AudioFocusListener implements AudioManager.OnAudioFocusChangeListen
 
     public boolean requestAudioFocus(){
         int res;
-        res =  am.requestAudioFocus(this,AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+        res =  am.requestAudioFocus(this,AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN);
         if (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             audioState = AudioManager.AUDIOFOCUS_GAIN;
             app.unduckAll();
@@ -61,8 +61,9 @@ public class AudioFocusListener implements AudioManager.OnAudioFocusChangeListen
         return this.hasAudioFocus();
     }
     public void abandonAudioFocus(){
+        app.pauseAll();
         am.abandonAudioFocus(this);
         this.audioState = AudioManager.AUDIOFOCUS_LOSS;
-        app.pauseAll();
+
     }
 }

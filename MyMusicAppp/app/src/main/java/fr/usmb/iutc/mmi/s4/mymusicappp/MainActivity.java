@@ -4,14 +4,11 @@ import android.content.BroadcastReceiver;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
-import android.media.MediaMetadata;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
-import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Environment;
-import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -20,12 +17,9 @@ import android.widget.Button;
 import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.io.File;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -95,16 +89,6 @@ public class MainActivity extends AppCompatActivity {
                 afl.requestAudioFocus();
             }
         });
-        System.out.println("Son1 - URI: " + this.getString(R.string.sound1));
-        Uri son1 = Uri.parse(this.getString(R.string.sound1));
-        this.setSon(1, son1);
-        this.setButtonTitle(1, son1);
-        File file = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_MUSIC), this.getString(R.string.sound2));
-        System.out.println("Son2 - path: " + file);
-        Uri son2 = Uri.fromFile(file);
-        this.setSon(2, son2);
-        this.setButtonTitle(2, son2);
     }
 
     @Override
@@ -122,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
         System.out.println("URI : "+uri.toString());
         MediaPlayer mp = MediaPlayer.create(this, uri);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        mp.setLooping(false);
         mps[id-1] = mp;
     }
 
@@ -229,10 +214,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
         this.cleanAllMps();
         afl.abandonAudioFocus();
         this.unregisterReceiver(audioBroacastReceiver);
+        super.onDestroy();
     }
 
     @Override
