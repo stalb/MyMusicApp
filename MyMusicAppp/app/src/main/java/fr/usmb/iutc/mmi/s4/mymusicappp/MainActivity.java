@@ -33,6 +33,16 @@ public class MainActivity extends AppCompatActivity {
     private LinkedList<MediaPlayer> playlist = new LinkedList<>();
     private Uri[]  uris = new Uri[10];
 
+    private MediaPlayer.OnCompletionListener onCompletionListener = new MediaPlayer.OnCompletionListener() {
+        @Override
+        public void onCompletion(MediaPlayer mediaPlayer) {
+            // supression du 1er element de la playlist
+            MediaPlayer mp = playlist.pollFirst();
+            // liberation des resources associees au mediaplayer
+            mp.release();
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -207,6 +217,8 @@ public class MainActivity extends AppCompatActivity {
         // puis on l'ajoute dans a la fin de la playlist
         if (uris[i-1] != null) {
             MediaPlayer nouveau = MediaPlayer.create(this, uris[i-1]);
+            // association au MediaPlyer.OnCompletionListener pour savoir quand le morceau est termine
+            nouveau.setOnCompletionListener(onCompletionListener);
             // si on est en mode bas niveau sonore, on l'applique au nouveau mediaplayer
             if (audioFocusManager.canDuck()) {
                 nouveau.setVolume(0.2f, 0.2f);
