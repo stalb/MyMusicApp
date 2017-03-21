@@ -8,11 +8,13 @@ import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -97,6 +99,19 @@ public class MainActivity extends AppCompatActivity {
         // association ave le boution 1
         mps[0] = mp1;
         b1.setText("Les cornichons");
+
+        // recuperation d'un fichier audio externe
+        // remarque il faut penser a ajouter la permission READ_EXTERNAL_STORAGE dans  AndroidManifest.xml
+        File son2 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
+                "mp3/Adele/25/01 - Hello.mp3");
+        System.out.println("Son2 : " + son2);
+        // transformation en URI et creation du mediaplayer, puis association avec le bouton 2
+        Uri uri2 = Uri.fromFile(son2);
+        System.out.println("Uri2 : " + uri2);
+        MediaPlayer mp2 = MediaPlayer.create(this, uri2);
+        mps[1] = mp2;
+        this.setButtonTitle(2, uri2);
+
     }
 
     @Override
