@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer[]  mps = new MediaPlayer[10];
     private List<MediaPlayer> onPause= new LinkedList<>();
     private BroadcastReceiver noisyBroacastReceiver ;
+    private MyAudioFocusManager audioFocusManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +74,24 @@ public class MainActivity extends AppCompatActivity {
         noisyBroacastReceiver = new MyAudioBroadcastReceiver(this);
         IntentFilter noisyFilter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
         this.registerReceiver(noisyBroacastReceiver, noisyFilter);
+
+        // creation et enregistrement du gestionaire de focus audio
+        audioFocusManager = new MyAudioFocusManager(this);
+
+        // activation des boutons de gestion manuelle du focus audio
+        bAbandonFocus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                audioFocusManager.abandonAudioFocus();
+            }
+        });
+        bRequestFocus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                audioFocusManager.requestAudioFocus();
+            }
+        });
+
     }
 
     @Override
@@ -122,9 +141,13 @@ public class MainActivity extends AppCompatActivity {
     public void playOrStop(int i){
         if (mps[ i-1] != null) {
             if ( ! mps[i-1].isPlaying()){
-                {
+                // avant de demarrer le son on verifie
+                // si c'est possible
+                if (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus()){
                     System.out.println("play "+i);
                     mps[i-1].start();
+                } else {
+                    System.out.println("interdit : pas de focus audio");
                 }
             } else {
                 System.out.println("pause "+i);
@@ -168,12 +191,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     public void restart(){
-        {
+        // avant de relancer la musique on verifie
+        // si on a le focus audio et eventuellement on le demande
+        if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()) {
             System.out.println("restart all");
             for (MediaPlayer son : onPause) {
                 son.start();
             }
             onPause.clear();
+        } else {
+            System.out.println("interdit : pas de focus audio");
         }
     }
 
@@ -207,6 +234,10 @@ public class MainActivity extends AppCompatActivity {
         this.cleanAllMps();
         // de-enregistrement du broadcastReceiver
         this.unregisterReceiver(noisyBroacastReceiver);
+
+        // avant de quiter on abandonne le focus audio
+        audioFocusManager.abandonAudioFocus();
+
         super.onDestroy();
     }
 }
