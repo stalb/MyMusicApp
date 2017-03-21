@@ -92,6 +92,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // recupertaion de la ressource musicale (resource raw) et creation du MediaPlayer
+        MediaPlayer mp1 = MediaPlayer.create(this,R.raw.cornichons_mp3);
+        // association ave le boution 1
+        mps[0] = mp1;
+        b1.setText("Les cornichons");
     }
 
     @Override
