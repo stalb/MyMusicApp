@@ -214,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     public void unduckAll(){
-        System.out.println("duck all");
+        System.out.println("unduck all");
         for (MediaPlayer son : mps ){
             if (son != null ){
                 son.setVolume(1f, 1f);
