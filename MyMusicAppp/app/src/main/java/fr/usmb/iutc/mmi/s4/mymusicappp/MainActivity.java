@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private List<MediaPlayer> onPause= new LinkedList<>();
     private BroadcastReceiver noisyBroacastReceiver ;
     private MyAudioFocusManager audioFocusManager;
+    private LinkedList<MediaPlayer> playlist = new LinkedList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
