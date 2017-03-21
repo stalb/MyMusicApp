@@ -239,27 +239,30 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void stopAll(){
-        System.out.println("stop all");
-        onPause.clear();
-        for (MediaPlayer son : mps ){
+        System.out.println("stop playlist");
+        for (MediaPlayer son : playlist ){
             if (son != null){
                 son.pause();
                 son.seekTo(0);
+                // on libere les resources associes au mediaplayer
+                son.release();
             }
         }
+        // on vide la playlist
+        playlist.clear();
+
     }
     public void pauseAll(){
-        System.out.println("pause all");
-        for (MediaPlayer son : mps ){
+        System.out.println("pause playlist");
+        for (MediaPlayer son : playlist ){
             if (son != null && son.isPlaying()){
                 son.pause();
-                onPause.add(son);
-            }
+             }
         }
     }
     public void duckAll(){
         System.out.println("duck all");
-        for (MediaPlayer son : mps ){
+        for (MediaPlayer son : playlist ){
             if (son != null ){
                 son.setVolume(0.2f, 0.2f);
             }
@@ -267,7 +270,7 @@ public class MainActivity extends AppCompatActivity {
     }
     public void unduckAll(){
         System.out.println("duck all");
-        for (MediaPlayer son : mps ){
+        for (MediaPlayer son : playlist ){
             if (son != null ){
                 son.setVolume(1f, 1f);
             }
@@ -277,11 +280,11 @@ public class MainActivity extends AppCompatActivity {
         // avant de relancer la musique on verifie
         // si on a le focus audio et eventuellement on le demande
         if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()) {
-            System.out.println("restart all");
-            for (MediaPlayer son : onPause) {
+            System.out.println("restart playlist");
+            MediaPlayer son = playlist.peekFirst();
+            if (son != null) {
                 son.start();
             }
-            onPause.clear();
         } else {
             System.out.println("interdit : pas de focus audio");
         }
