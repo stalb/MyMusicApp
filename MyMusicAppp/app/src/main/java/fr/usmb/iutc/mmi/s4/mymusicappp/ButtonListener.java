@@ -1,7 +1,5 @@
 package fr.usmb.iutc.mmi.s4.mymusicappp;
 
-import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.media.RingtoneManager;
 import android.view.View;
