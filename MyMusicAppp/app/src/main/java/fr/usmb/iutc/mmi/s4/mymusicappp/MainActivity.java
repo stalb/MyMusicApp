@@ -18,6 +18,9 @@ import android.widget.Button;
 import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -25,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private MyAudioFocusManager audioFocusManager;
     private LinkedList<MediaPlayer> playlist = new LinkedList<>();
     private Uri[]  uris = new Uri[10];
+    private ExecutorService backgroundThread ;
 
     private MediaPlayer.OnCompletionListener onCompletionListener = new MediaPlayer.OnCompletionListener() {
     @Override
@@ -85,6 +89,8 @@ public class MainActivity extends AppCompatActivity {
 
         // creation et enregistrement du gestionaire de focus audio
         audioFocusManager = new MyAudioFocusManager(this);
+        // on demande aussi le fus au demmarage de l'activite
+        audioFocusManager.requestAudioFocus();
 
         // activation des boutons de gestion manuelle du focus audio
         bAbandonFocus.setOnClickListener(new View.OnClickListener() {
@@ -100,6 +106,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // creation du pool de thread pour les taches en arriere plan (1 seul thread)
+        backgroundThread = Executors.newSingleThreadExecutor();
+
         // recupertaion de la ressource musicale (resource raw) et
         // creation l'uri qui correspond a lui :
         // android.resource://fr.usmb.iutc.mmi.s4.mymusicappp/raw/cornichons_mp3"
@@ -109,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
         // association avec le boution 1
         uris[0] = uri1;
         //b1.setText("Les cornichons");
-        this.setButtonTitle(1,uri1);
+        this.setButtonTitleAsync(1,uri1);
 
         // recuperation d'un fichier audio externe
         // remarque il faut penser a ajouter la permission READ_EXTERNAL_STORAGE dans  AndroidManifest.xml
@@ -120,14 +129,14 @@ public class MainActivity extends AppCompatActivity {
         Uri uri2 = Uri.fromFile(son2);
         System.out.println("Uri2 : " + uri2);
         uris[1] = uri2;
-        this.setButtonTitle(2, uri2);
+        this.setButtonTitleAsync(2, uri2);
 
         // recuperation d'un flux sonnore sur internet
         // et association avec le bouton 3
         // RQ : il est necessaire d'ajouter la permission INTERNET dans AndroidManifest.xml
         Uri uri3 = Uri.parse("http://audionautix.com/Music/TexasTechno.mp3");
         uris[2] = uri3;
-        this.setButtonTitle(3, uri3);
+        this.setButtonTitleAsync(3, uri3);
     }
 
     @Override
@@ -136,7 +145,7 @@ public class MainActivity extends AppCompatActivity {
             Uri uri = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
             if (uri != null) {
                 this.setSon(requestCode, uri);
-                this.setButtonTitle(requestCode, uri);
+                this.setButtonTitleAsync(requestCode, uri);
             }
         }
     }
@@ -146,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
         uris[id-1] = uri;
     }
 
-    public void setButtonTitle(int id, Uri uri){
+    public void setButtonTitle(final int id,final Uri uri){
         System.out.println("URI : "+uri.toString());
         MediaMetadataRetriever dataManager = new MediaMetadataRetriever();
         if ("file".equalsIgnoreCase(uri.getScheme())
@@ -158,17 +167,34 @@ public class MainActivity extends AppCompatActivity {
         }
         String trackTitle = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
         String trackAuthor = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
-        String title= ((trackTitle != null) ? trackTitle : "inconnu" )+ " / " + ((trackAuthor != null) ? trackAuthor : "inconnu" );
-        if (title != null){
-            switch (id){
-                case 1 : ((Button) this.findViewById(R.id.button1)).setText(title); break;
-                case 2 : ((Button) this.findViewById(R.id.button2)).setText(title); break;
-                case 3 : ((Button) this.findViewById(R.id.button3)).setText(title); break;
-                case 4 : ((Button) this.findViewById(R.id.button4)).setText(title); break;
-                case 5 : ((Button) this.findViewById(R.id.button5)).setText(title); break;
-                case 6 : ((Button) this.findViewById(R.id.button6)).setText(title); break;
+        final String title = ((trackTitle != null) ? trackTitle : "inconnu" )+ " / " + ((trackAuthor != null) ? trackAuthor : "inconnu" );
+        // la mise a jour du titre des bouton doit se faire dans le thread d'interface utilisateur
+        this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (title != null){
+                    switch (id){
+                        case 1 : ((Button) MainActivity.this.findViewById(R.id.button1)).setText(title); break;
+                        case 2 : ((Button) MainActivity.this.findViewById(R.id.button2)).setText(title); break;
+                        case 3 : ((Button) MainActivity.this.findViewById(R.id.button3)).setText(title); break;
+                        case 4 : ((Button) MainActivity.this.findViewById(R.id.button4)).setText(title); break;
+                        case 5 : ((Button) MainActivity.this.findViewById(R.id.button5)).setText(title); break;
+                        case 6 : ((Button) MainActivity.this.findViewById(R.id.button6)).setText(title); break;
+                    }
+                }
             }
-        }
+        });
+    }
+
+    // mise a jour du titre du bouton via le pool de thread
+    public void setButtonTitleAsync(final int i, final Uri uri){
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                setButtonTitle(i, uri);
+            }
+        };
+        backgroundThread.execute(task);
     }
 
     public Uri getSon(int id){
@@ -192,21 +218,35 @@ public class MainActivity extends AppCompatActivity {
             }
             playlist.addLast(nouveau);
             }
-        // si le 1er element de la playlist n'est pas en cours de lceture
+        // si le 1er element de la playlist n'est pas en cours de lecture
         // on essaye de le lancer (quand c'est possible)
         MediaPlayer mp = playlist.getFirst();
-        if (! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus())){
+        if (! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())){
             System.out.println("starting 1st element");
             mp.start();
         }
     }
 
+    // ajout dans la playlist en utilisant le pool de thread
+    public void addToPlaylistAsync(final int i){
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                addToPlaylist(i);
+            }
+        };
+        backgroundThread.execute(task);
+    }
+
     public void stopAll(){
         System.out.println("stop playlist");
+        //on met en pause
+        this.pauseAll();
+        // et on abandone le focus audio
+        audioFocusManager.abandonAudioFocus();
+        // on libere les elements de la playlist
         for (MediaPlayer son : playlist ){
             if (son != null){
-                son.pause();
-                son.seekTo(0);
                 // on libere les resources associes au mediaplayer
                 son.release();
             }
@@ -271,6 +311,15 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        // arret du pool de thread
+        backgroundThread.shutdownNow();
+        try {
+            // on attend l'arret effectif du poll de thread
+            backgroundThread.awaitTermination(2000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         // arret de la playlist
         this.stopAll();
         // de-enregistrement du broadcastReceiver
