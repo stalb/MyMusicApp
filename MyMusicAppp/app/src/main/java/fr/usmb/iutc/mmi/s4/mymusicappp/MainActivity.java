@@ -1,6 +1,7 @@
 package fr.usmb.iutc.mmi.s4.mymusicappp;
 
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
@@ -30,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver noisyBroacastReceiver ;
     private MyAudioFocusManager audioFocusManager;
     private LinkedList<MediaPlayer> playlist = new LinkedList<>();
+    private Uri[]  uris = new Uri[10];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,9 +99,16 @@ public class MainActivity extends AppCompatActivity {
 
         // recupertaion de la ressource musicale (resource raw) et creation du MediaPlayer
         MediaPlayer mp1 = MediaPlayer.create(this,R.raw.cornichons_mp3);
-        // association ave le boution 1
+        // on construit l'uri qui correspond a le resource locale :
+        // android.resource://fr.usmb.iutc.mmi.s4.mymusicappp/raw/cornichons_mp3"
+        Uri.Builder uriBuilder = new Uri.Builder();
+        Uri uri1 = uriBuilder.scheme(ContentResolver.SCHEME_ANDROID_RESOURCE).authority(getPackageName()).path("raw/cornichons_mp3").build();
+        System.out.println("Uri1 : " + uri1);
+        // association avec le boution 1
         mps[0] = mp1;
-        b1.setText("Les cornichons");
+        uris[0] = uri1;
+        //b1.setText("Les cornichons");
+        this.setButtonTitle(1,uri1);
 
         // recuperation d'un fichier audio externe
         // remarque il faut penser a ajouter la permission READ_EXTERNAL_STORAGE dans  AndroidManifest.xml
@@ -111,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
         System.out.println("Uri2 : " + uri2);
         MediaPlayer mp2 = MediaPlayer.create(this, uri2);
         mps[1] = mp2;
+        uris[1] = uri2;
         this.setButtonTitle(2, uri2);
 
         // recuperation d'un flux sonnore sur internet
@@ -119,6 +129,7 @@ public class MainActivity extends AppCompatActivity {
         Uri uri3 = Uri.parse("http://audionautix.com/Music/TexasTechno.mp3");
         MediaPlayer mp3 = MediaPlayer.create(this, uri3);
         mps[2] = mp3;
+        uris[1] = uri3;
         this.setButtonTitle(3, uri3);
     }
 
@@ -142,12 +153,15 @@ public class MainActivity extends AppCompatActivity {
             mp.setVolume(0.2f, 0.2f);
         }
         mps[id-1] = mp;
+        uris[id-1] = uri;
     }
 
     public void setButtonTitle(int id, Uri uri){
         System.out.println("URI : "+uri.toString());
         MediaMetadataRetriever dataManager = new MediaMetadataRetriever();
-        if ("file".equalsIgnoreCase(uri.getScheme()) || "content".equalsIgnoreCase(uri.getScheme())){
+        if ("file".equalsIgnoreCase(uri.getScheme())
+                || "content".equalsIgnoreCase(uri.getScheme())
+                || ContentResolver.SCHEME_ANDROID_RESOURCE.equalsIgnoreCase(uri.getScheme())) {
             dataManager.setDataSource(this, uri);
         } else {
             dataManager.setDataSource(uri.toString(), new HashMap<String, String>());
