@@ -1,8 +1,6 @@
 package fr.usmb.iutc.mmi.s4.mymusicappp;
 
-import android.content.BroadcastReceiver;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.Ringtone;
@@ -82,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
         Ringtone son = RingtoneManager.getRingtone(this, uri);
         MediaPlayer mp = MediaPlayer.create(this, uri);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        //mp.setLooping(false);
+        mp.setLooping(false);
         mps[id-1] = mp;
         if (son != null){
              switch (id){
