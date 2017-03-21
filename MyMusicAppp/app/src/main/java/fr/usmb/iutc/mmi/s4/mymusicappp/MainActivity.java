@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
                 restart();
             }
         });
+        this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
     }
 
     @Override
