@@ -1,6 +1,8 @@
 package fr.usmb.iutc.mmi.s4.mymusicappp;
 
+import android.content.BroadcastReceiver;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
@@ -23,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private MediaPlayer[]  mps = new MediaPlayer[10];
     private List<MediaPlayer> onPause= new LinkedList<>();
+    private BroadcastReceiver noisyBroacastReceiver ;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,7 +66,13 @@ public class MainActivity extends AppCompatActivity {
                 restart();
             }
         });
+
         this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
+
+        // creation en enregistrement du BroadcastReceiver
+        noisyBroacastReceiver = new MyAudioBroadcastReceiver(this);
+        IntentFilter noisyFilter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+        this.registerReceiver(noisyBroacastReceiver, noisyFilter);
     }
 
     @Override
@@ -196,6 +205,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         this.cleanAllMps();
+        // de-enregistrement du broadcastReceiver
+        this.unregisterReceiver(noisyBroacastReceiver);
         super.onDestroy();
     }
 }
