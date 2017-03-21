@@ -77,6 +77,21 @@ public class MainActivity extends AppCompatActivity {
 
         // creation et enregistrement du gestionaire de focus audio
         audioFocusManager = new MyAudioFocusManager(this);
+
+        // activation des boutons de gestion manuelle du focus audio
+        bAbandonFocus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                audioFocusManager.abandonAudioFocus();
+            }
+        });
+        bRequestFocus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                audioFocusManager.requestAudioFocus();
+            }
+        });
+
     }
 
     @Override
