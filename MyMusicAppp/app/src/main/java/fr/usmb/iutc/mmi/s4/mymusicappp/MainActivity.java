@@ -1,6 +1,8 @@
 package fr.usmb.iutc.mmi.s4.mymusicappp;
 
+import android.content.BroadcastReceiver;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
@@ -23,6 +25,8 @@ public class MainActivity extends AppCompatActivity {
      */
     private MediaPlayer[]  mps = new MediaPlayer[10];
     private List<MediaPlayer> onPause= new LinkedList<>();
+    private BroadcastReceiver noisyBroacastReceiver ;
+    private MyAudioFocusManager audioFocusManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +67,31 @@ public class MainActivity extends AppCompatActivity {
                 restart();
             }
         });
+
+        this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
+
+        // creation en enregistrement du BroadcastReceiver
+        noisyBroacastReceiver = new MyAudioBroadcastReceiver(this);
+        IntentFilter noisyFilter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+        this.registerReceiver(noisyBroacastReceiver, noisyFilter);
+
+        // creation et enregistrement du gestionaire de focus audio
+        audioFocusManager = new MyAudioFocusManager(this);
+
+        // activation des boutons de gestion manuelle du focus audio
+        bAbandonFocus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                audioFocusManager.abandonAudioFocus();
+            }
+        });
+        bRequestFocus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                audioFocusManager.requestAudioFocus();
+            }
+        });
+
     }
 
     @Override
@@ -80,6 +109,10 @@ public class MainActivity extends AppCompatActivity {
         System.out.println("URI : "+uri.toString());
         MediaPlayer mp = MediaPlayer.create(this, uri);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        // si on est en mode bas niveau sonore, on l'applique au nouveau son
+        if (audioFocusManager.canDuck()) {
+            mp.setVolume(0.2f, 0.2f);
+        }
         mps[id-1] = mp;
     }
 
@@ -112,9 +145,13 @@ public class MainActivity extends AppCompatActivity {
     public void playOrStop(int i){
         if (mps[ i-1] != null) {
             if ( ! mps[i-1].isPlaying()){
-                {
+                // avant de demarrer le son on verifie si c'est possible
+                // ou on demande le focus audio
+                if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()){
                     System.out.println("play "+i);
                     mps[i-1].start();
+                } else {
+                    System.out.println("interdit : pas de focus audio");
                 }
             } else {
                 System.out.println("pause "+i);
@@ -158,12 +195,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     public void restart(){
-        {
+        // avant de relancer la musique on verifie
+        // si on a le focus audio et eventuellement on le demande
+        if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()) {
             System.out.println("restart all");
             for (MediaPlayer son : onPause) {
                 son.start();
             }
             onPause.clear();
+        } else {
+            System.out.println("interdit : pas de focus audio");
         }
     }
 
@@ -195,6 +236,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         this.cleanAllMps();
+        // de-enregistrement du broadcastReceiver
+        this.unregisterReceiver(noisyBroacastReceiver);
+
+        // avant de quiter on abandonne le focus audio
+        audioFocusManager.abandonAudioFocus();
+
         super.onDestroy();
     }
 }
