@@ -109,6 +109,10 @@ public class MainActivity extends AppCompatActivity {
         System.out.println("URI : "+uri.toString());
         MediaPlayer mp = MediaPlayer.create(this, uri);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        // si on est en mode bas niveau sonore, on l'applique au nouveau son
+        if (audioFocusManager.canDuck()) {
+            mp.setVolume(0.2f, 0.2f);
+        }
         mps[id-1] = mp;
     }
 
