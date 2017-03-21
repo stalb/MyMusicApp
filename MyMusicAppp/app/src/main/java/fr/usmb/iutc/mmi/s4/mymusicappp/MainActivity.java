@@ -233,6 +233,7 @@ public class MainActivity extends AppCompatActivity {
         // on essaye de le lancer (quand c'est possible)
         MediaPlayer mp = playlist.getFirst();
         if (! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus())){
+            System.out.println("starting 1st element");
             mp.start();
         }
     }
