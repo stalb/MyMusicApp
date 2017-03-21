@@ -109,6 +109,10 @@ public class MainActivity extends AppCompatActivity {
         System.out.println("URI : "+uri.toString());
         MediaPlayer mp = MediaPlayer.create(this, uri);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        // si on est en mode bas niveau sonore, on l'applique au nouveau son
+        if (audioFocusManager.canDuck()) {
+            mp.setVolume(0.2f, 0.2f);
+        }
         mps[id-1] = mp;
     }
 
@@ -141,9 +145,9 @@ public class MainActivity extends AppCompatActivity {
     public void playOrStop(int i){
         if (mps[ i-1] != null) {
             if ( ! mps[i-1].isPlaying()){
-                // avant de demarrer le son on verifie
-                // si c'est possible
-                if (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus()){
+                // avant de demarrer le son on verifie si c'est possible
+                // ou on demande le focus audio
+                if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()){
                     System.out.println("play "+i);
                     mps[i-1].start();
                 } else {
