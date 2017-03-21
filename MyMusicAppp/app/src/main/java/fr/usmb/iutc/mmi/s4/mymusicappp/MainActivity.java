@@ -201,6 +201,30 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
+    public void addToPlaylist(int i){
+        // si l'URI n'est pas null on cree le mediaplayer correspondant
+        // puis on l'ajoute dans a la fin de la playlist
+        if (uris[i-1] != null) {
+            MediaPlayer nouveau = MediaPlayer.create(this, uris[i-1]);
+            // si on est en mode bas niveau sonore, on l'applique au nouveau mediaplayer
+            if (audioFocusManager.canDuck()) {
+                nouveau.setVolume(0.2f, 0.2f);
+            }
+            MediaPlayer dernier = playlist.peekLast();
+            if (dernier != null) {
+                dernier.setNextMediaPlayer(nouveau);
+            }
+            playlist.addLast(nouveau);
+        }
+        // si le 1er element de la playlist n'est pas en cours de lceture
+        // on essaye de le lancer (quand c'est possible)
+        MediaPlayer mp = playlist.getFirst();
+        if (! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus())){
+            mp.start();
+        }
+    }
+
     public void stopAll(){
         System.out.println("stop all");
         onPause.clear();
