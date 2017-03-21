@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
         Uri uri3 = Uri.parse("http://audionautix.com/Music/TexasTechno.mp3");
         MediaPlayer mp3 = MediaPlayer.create(this, uri3);
         mps[2] = mp3;
-        uris[1] = uri3;
+        uris[2] = uri3;
         this.setButtonTitle(3, uri3);
     }
 
