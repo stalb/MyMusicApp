@@ -18,16 +18,9 @@ import android.widget.Button;
 import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    /**
-     * ATTENTION: This was auto-generated to implement the App Indexing API.
-     * See https://g.co/AppIndexing/AndroidStudio for more information.
-     */
-    private MediaPlayer[]  mps = new MediaPlayer[10];
-    private List<MediaPlayer> onPause= new LinkedList<>();
     private BroadcastReceiver noisyBroacastReceiver ;
     private MyAudioFocusManager audioFocusManager;
     private LinkedList<MediaPlayer> playlist = new LinkedList<>();
@@ -107,15 +100,13 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // recupertaion de la ressource musicale (resource raw) et creation du MediaPlayer
-        MediaPlayer mp1 = MediaPlayer.create(this,R.raw.cornichons_mp3);
-        // on construit l'uri qui correspond a le resource locale :
+        // recupertaion de la ressource musicale (resource raw) et
+        // creation l'uri qui correspond a lui :
         // android.resource://fr.usmb.iutc.mmi.s4.mymusicappp/raw/cornichons_mp3"
         Uri.Builder uriBuilder = new Uri.Builder();
         Uri uri1 = uriBuilder.scheme(ContentResolver.SCHEME_ANDROID_RESOURCE).authority(getPackageName()).path("raw/cornichons_mp3").build();
         System.out.println("Uri1 : " + uri1);
         // association avec le boution 1
-        mps[0] = mp1;
         uris[0] = uri1;
         //b1.setText("Les cornichons");
         this.setButtonTitle(1,uri1);
@@ -128,8 +119,6 @@ public class MainActivity extends AppCompatActivity {
         // transformation en URI et creation du mediaplayer, puis association avec le bouton 2
         Uri uri2 = Uri.fromFile(son2);
         System.out.println("Uri2 : " + uri2);
-        MediaPlayer mp2 = MediaPlayer.create(this, uri2);
-        mps[1] = mp2;
         uris[1] = uri2;
         this.setButtonTitle(2, uri2);
 
@@ -137,8 +126,6 @@ public class MainActivity extends AppCompatActivity {
         // et association avec le bouton 3
         // RQ : il est necessaire d'ajouter la permission INTERNET dans AndroidManifest.xml
         Uri uri3 = Uri.parse("http://audionautix.com/Music/TexasTechno.mp3");
-        MediaPlayer mp3 = MediaPlayer.create(this, uri3);
-        mps[2] = mp3;
         uris[2] = uri3;
         this.setButtonTitle(3, uri3);
     }
@@ -156,13 +143,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void setSon(int id, Uri uri){
         System.out.println("URI : "+uri.toString());
-        MediaPlayer mp = MediaPlayer.create(this, uri);
-        mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        // si on est en mode bas niveau sonore, on l'applique au nouveau son
-        if (audioFocusManager.canDuck()) {
-            mp.setVolume(0.2f, 0.2f);
-        }
-        mps[id-1] = mp;
         uris[id-1] = uri;
     }
 
@@ -191,25 +171,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public MediaPlayer getSon(int id){
-        return mps[id-1];
-    }
-    public void playOrStop(int i){
-        if (mps[ i-1] != null) {
-            if ( ! mps[i-1].isPlaying()){
-                // avant de demarrer le son on verifie si c'est possible
-                // ou on demande le focus audio
-                if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()){
-                    System.out.println("play "+i);
-                    mps[i-1].start();
-                } else {
-                    System.out.println("interdit : pas de focus audio");
-                }
-            } else {
-                System.out.println("pause "+i);
-                mps[i-1].pause();
-            }
-        }
+    public Uri getSon(int id){
+        return uris[id-1];
     }
 
     public void addToPlaylist(int i){
@@ -290,15 +253,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void cleanAllMps(){
-        for (int i=0; i< mps.length; i++){
-            if (mps[i] != null){
-                mps[i].reset();
-                mps[i].release();
-                mps[i] = null;
-            }
-        }
-    }
     @Override
     protected void onStart() {
         super.onStart();
@@ -319,7 +273,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         // arret de la playlist
         this.stopAll();
-        this.cleanAllMps();
         // de-enregistrement du broadcastReceiver
         this.unregisterReceiver(noisyBroacastReceiver);
 
