@@ -25,7 +25,7 @@ public class ButtonListener implements View.OnClickListener {
             Intent intent = new Intent(RingtoneManager.ACTION_RINGTONE_PICKER);
             mainActivity.startActivityForResult(intent, code);
         } else {
-            mainActivity.addToPlaylist(code);
+            mainActivity.addToPlaylistAsync(code);
         }
     }
 }
