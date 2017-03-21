@@ -1,6 +1,7 @@
 package fr.usmb.iutc.mmi.s4.mymusicappp;
 
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
@@ -17,18 +18,23 @@ import android.widget.Button;
 import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    /**
-     * ATTENTION: This was auto-generated to implement the App Indexing API.
-     * See https://g.co/AppIndexing/AndroidStudio for more information.
-     */
-    private MediaPlayer[]  mps = new MediaPlayer[10];
-    private List<MediaPlayer> onPause= new LinkedList<>();
     private BroadcastReceiver noisyBroacastReceiver ;
     private MyAudioFocusManager audioFocusManager;
+    private LinkedList<MediaPlayer> playlist = new LinkedList<>();
+    private Uri[]  uris = new Uri[10];
+
+    private MediaPlayer.OnCompletionListener onCompletionListener = new MediaPlayer.OnCompletionListener() {
+    @Override
+        public void onCompletion(MediaPlayer mediaPlayer) {
+            // supression du 1er element de la playlist
+            MediaPlayer mp = playlist.pollFirst();
+            // liberation des resources associees au mediaplayer
+            mp.release();
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,11 +100,16 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // recupertaion de la ressource musicale (resource raw) et creation du MediaPlayer
-        MediaPlayer mp1 = MediaPlayer.create(this,R.raw.cornichons_mp3);
-        // association ave le boution 1
-        mps[0] = mp1;
-        b1.setText("Les cornichons");
+        // recupertaion de la ressource musicale (resource raw) et
+        // creation l'uri qui correspond a lui :
+        // android.resource://fr.usmb.iutc.mmi.s4.mymusicappp/raw/cornichons_mp3"
+        Uri.Builder uriBuilder = new Uri.Builder();
+        Uri uri1 = uriBuilder.scheme(ContentResolver.SCHEME_ANDROID_RESOURCE).authority(getPackageName()).path("raw/cornichons_mp3").build();
+        System.out.println("Uri1 : " + uri1);
+        // association avec le boution 1
+        uris[0] = uri1;
+        //b1.setText("Les cornichons");
+        this.setButtonTitle(1,uri1);
 
         // recuperation d'un fichier audio externe
         // remarque il faut penser a ajouter la permission READ_EXTERNAL_STORAGE dans  AndroidManifest.xml
@@ -108,16 +119,14 @@ public class MainActivity extends AppCompatActivity {
         // transformation en URI et creation du mediaplayer, puis association avec le bouton 2
         Uri uri2 = Uri.fromFile(son2);
         System.out.println("Uri2 : " + uri2);
-        MediaPlayer mp2 = MediaPlayer.create(this, uri2);
-        mps[1] = mp2;
+        uris[1] = uri2;
         this.setButtonTitle(2, uri2);
 
         // recuperation d'un flux sonnore sur internet
         // et association avec le bouton 3
         // RQ : il est necessaire d'ajouter la permission INTERNET dans AndroidManifest.xml
         Uri uri3 = Uri.parse("http://audionautix.com/Music/TexasTechno.mp3");
-        MediaPlayer mp3 = MediaPlayer.create(this, uri3);
-        mps[2] = mp3;
+        uris[2] = uri3;
         this.setButtonTitle(3, uri3);
     }
 
@@ -134,19 +143,15 @@ public class MainActivity extends AppCompatActivity {
 
     public void setSon(int id, Uri uri){
         System.out.println("URI : "+uri.toString());
-        MediaPlayer mp = MediaPlayer.create(this, uri);
-        mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        // si on est en mode bas niveau sonore, on l'applique au nouveau son
-        if (audioFocusManager.canDuck()) {
-            mp.setVolume(0.2f, 0.2f);
-        }
-        mps[id-1] = mp;
+        uris[id-1] = uri;
     }
 
     public void setButtonTitle(int id, Uri uri){
         System.out.println("URI : "+uri.toString());
         MediaMetadataRetriever dataManager = new MediaMetadataRetriever();
-        if ("file".equalsIgnoreCase(uri.getScheme()) || "content".equalsIgnoreCase(uri.getScheme())){
+        if ("file".equalsIgnoreCase(uri.getScheme())
+                || "content".equalsIgnoreCase(uri.getScheme())
+                || ContentResolver.SCHEME_ANDROID_RESOURCE.equalsIgnoreCase(uri.getScheme())) {
             dataManager.setDataSource(this, uri);
         } else {
             dataManager.setDataSource(uri.toString(), new HashMap<String, String>());
@@ -166,48 +171,61 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public MediaPlayer getSon(int id){
-        return mps[id-1];
+    public Uri getSon(int id){
+        return uris[id-1];
     }
-    public void playOrStop(int i){
-        if (mps[ i-1] != null) {
-            if ( ! mps[i-1].isPlaying()){
-                // avant de demarrer le son on verifie si c'est possible
-                // ou on demande le focus audio
-                if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()){
-                    System.out.println("play "+i);
-                    mps[i-1].start();
-                } else {
-                    System.out.println("interdit : pas de focus audio");
+
+    public void addToPlaylist(int i){
+        // si l'URI n'est pas null on cree le mediaplayer correspondant
+        // puis on l'ajoute dans a la fin de la playlist
+        if (uris[i-1] != null) {
+            MediaPlayer nouveau = MediaPlayer.create(this, uris[i-1]);
+            // association au MediaPlyer.OnCompletionListener pour savoir quand le morceau est termine
+            nouveau.setOnCompletionListener(onCompletionListener);
+            // si on est en mode bas niveau sonore, on l'applique au nouveau mediaplayer
+            if (audioFocusManager.canDuck()) {
+                nouveau.setVolume(0.2f, 0.2f);
                 }
-            } else {
-                System.out.println("pause "+i);
-                mps[i-1].pause();
+            MediaPlayer dernier = playlist.peekLast();
+            if (dernier != null) {
+                dernier.setNextMediaPlayer(nouveau);
             }
+            playlist.addLast(nouveau);
+            }
+        // si le 1er element de la playlist n'est pas en cours de lceture
+        // on essaye de le lancer (quand c'est possible)
+        MediaPlayer mp = playlist.getFirst();
+        if (! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus())){
+            System.out.println("starting 1st element");
+            mp.start();
         }
     }
+
     public void stopAll(){
-        System.out.println("stop all");
-        onPause.clear();
-        for (MediaPlayer son : mps ){
+        System.out.println("stop playlist");
+        for (MediaPlayer son : playlist ){
             if (son != null){
                 son.pause();
                 son.seekTo(0);
+                // on libere les resources associes au mediaplayer
+                son.release();
             }
         }
+        // on vide la playlist
+        playlist.clear();
+
     }
     public void pauseAll(){
-        System.out.println("pause all");
-        for (MediaPlayer son : mps ){
+        System.out.println("pause playlist");
+        for (MediaPlayer son : playlist ){
             if (son != null && son.isPlaying()){
                 son.pause();
-                onPause.add(son);
             }
         }
     }
     public void duckAll(){
         System.out.println("duck all");
-        for (MediaPlayer son : mps ){
+        for (MediaPlayer son : playlist ){
             if (son != null ){
                 son.setVolume(0.2f, 0.2f);
             }
@@ -215,7 +233,7 @@ public class MainActivity extends AppCompatActivity {
     }
     public void unduckAll(){
         System.out.println("unduck all");
-        for (MediaPlayer son : mps ){
+        for (MediaPlayer son : playlist ){
             if (son != null ){
                 son.setVolume(1f, 1f);
             }
@@ -225,25 +243,16 @@ public class MainActivity extends AppCompatActivity {
         // avant de relancer la musique on verifie
         // si on a le focus audio et eventuellement on le demande
         if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()) {
-            System.out.println("restart all");
-            for (MediaPlayer son : onPause) {
+            System.out.println("restart playlist");
+            MediaPlayer son = playlist.peekFirst();
+            if (son != null) {
                 son.start();
             }
-            onPause.clear();
         } else {
             System.out.println("interdit : pas de focus audio");
         }
     }
 
-    public void cleanAllMps(){
-        for (int i=0; i< mps.length; i++){
-            if (mps[i] != null){
-                mps[i].reset();
-                mps[i].release();
-                mps[i] = null;
-            }
-        }
-    }
     @Override
     protected void onStart() {
         super.onStart();
@@ -262,7 +271,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        this.cleanAllMps();
+        // arret de la playlist
+        this.stopAll();
         // de-enregistrement du broadcastReceiver
         this.unregisterReceiver(noisyBroacastReceiver);
 
