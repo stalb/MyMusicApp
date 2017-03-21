@@ -2,8 +2,8 @@ package fr.usmb.iutc.mmi.s4.mymusicappp;
 
 import android.content.Intent;
 import android.media.AudioManager;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
-import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
@@ -11,8 +11,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
-import com.google.android.gms.common.api.GoogleApiClient;
-
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -22,7 +21,6 @@ public class MainActivity extends AppCompatActivity {
      * ATTENTION: This was auto-generated to implement the App Indexing API.
      * See https://g.co/AppIndexing/AndroidStudio for more information.
      */
-    private GoogleApiClient client;
     private MediaPlayer[]  mps = new MediaPlayer[10];
     private List<MediaPlayer> onPause= new LinkedList<>();
 
@@ -71,28 +69,43 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
             Uri uri = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
-            if (uri != null) this.setSon(requestCode, uri);
+            if (uri != null) {
+                this.setSon(requestCode, uri);
+                this.setButtonTitle(requestCode, uri);
+            }
         }
     }
 
     public void setSon(int id, Uri uri){
         System.out.println("URI : "+uri.toString());
-        Ringtone son = RingtoneManager.getRingtone(this, uri);
         MediaPlayer mp = MediaPlayer.create(this, uri);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        mp.setLooping(false);
         mps[id-1] = mp;
-        if (son != null){
-             switch (id){
-                 case 1 : ((Button) this.findViewById(R.id.button1)).setText(son.getTitle(this)); break;
-                 case 2 : ((Button) this.findViewById(R.id.button2)).setText(son.getTitle(this)); break;
-                 case 3 : ((Button) this.findViewById(R.id.button3)).setText(son.getTitle(this)); break;
-                 case 4 : ((Button) this.findViewById(R.id.button4)).setText(son.getTitle(this)); break;
-                 case 5 : ((Button) this.findViewById(R.id.button5)).setText(son.getTitle(this)); break;
-                 case 6 : ((Button) this.findViewById(R.id.button6)).setText(son.getTitle(this)); break;
+    }
+
+    public void setButtonTitle(int id, Uri uri){
+        System.out.println("URI : "+uri.toString());
+        MediaMetadataRetriever dataManager = new MediaMetadataRetriever();
+        if ("file".equalsIgnoreCase(uri.getScheme()) || "content".equalsIgnoreCase(uri.getScheme())){
+            dataManager.setDataSource(this, uri);
+        } else {
+            dataManager.setDataSource(uri.toString(), new HashMap<String, String>());
+        }
+        String trackTitle = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+        String trackAuthor = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+        String title= ((trackTitle != null) ? trackTitle : "inconnu" )+ " / " + ((trackAuthor != null) ? trackAuthor : "inconnu" );
+        if (title != null){
+            switch (id){
+                case 1 : ((Button) this.findViewById(R.id.button1)).setText(title); break;
+                case 2 : ((Button) this.findViewById(R.id.button2)).setText(title); break;
+                case 3 : ((Button) this.findViewById(R.id.button3)).setText(title); break;
+                case 4 : ((Button) this.findViewById(R.id.button4)).setText(title); break;
+                case 5 : ((Button) this.findViewById(R.id.button5)).setText(title); break;
+                case 6 : ((Button) this.findViewById(R.id.button6)).setText(title); break;
             }
         }
     }
+
     public MediaPlayer getSon(int id){
         return mps[id-1];
     }
