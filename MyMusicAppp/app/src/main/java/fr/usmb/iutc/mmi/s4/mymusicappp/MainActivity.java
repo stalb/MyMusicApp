@@ -317,6 +317,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        // arret de la playlist
+        this.stopAll();
         this.cleanAllMps();
         // de-enregistrement du broadcastReceiver
         this.unregisterReceiver(noisyBroacastReceiver);
