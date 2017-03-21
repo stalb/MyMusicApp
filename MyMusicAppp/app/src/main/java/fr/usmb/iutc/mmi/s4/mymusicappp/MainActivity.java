@@ -112,6 +112,13 @@ public class MainActivity extends AppCompatActivity {
         mps[1] = mp2;
         this.setButtonTitle(2, uri2);
 
+        // recuperation d'un flux sonnore sur internet
+        // et association avec le bouton 3
+        // RQ : il est necessaire d'ajouter la permission INTERNET dans AndroidManifest.xml
+        Uri uri3 = Uri.parse("http://audionautix.com/Music/TexasTechno.mp3");
+        MediaPlayer mp3 = MediaPlayer.create(this, uri3);
+        mps[2] = mp3;
+        this.setButtonTitle(3, uri3);
     }
 
     @Override
