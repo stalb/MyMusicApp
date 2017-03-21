@@ -18,6 +18,9 @@ import android.widget.Button;
 import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -25,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private MyAudioFocusManager audioFocusManager;
     private LinkedList<MediaPlayer> playlist = new LinkedList<>();
     private Uri[]  uris = new Uri[10];
+    private ExecutorService backgroundThread ;
 
     private MediaPlayer.OnCompletionListener onCompletionListener = new MediaPlayer.OnCompletionListener() {
     @Override
@@ -99,6 +103,9 @@ public class MainActivity extends AppCompatActivity {
                 audioFocusManager.requestAudioFocus();
             }
         });
+
+        // creation du pool de thread pour les taches en arriere plan (1 seul thread)
+        backgroundThread = Executors.newSingleThreadExecutor();
 
         // recupertaion de la ressource musicale (resource raw) et
         // creation l'uri qui correspond a lui :
@@ -271,6 +278,15 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        // arret du pool de thread
+        backgroundThread.shutdownNow();
+        try {
+            // on attend l'arret effectif du poll de thread
+            backgroundThread.awaitTermination(2000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         // arret de la playlist
         this.stopAll();
         // de-enregistrement du broadcastReceiver
