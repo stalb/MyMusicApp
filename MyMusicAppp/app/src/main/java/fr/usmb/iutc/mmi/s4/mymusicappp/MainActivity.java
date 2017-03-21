@@ -89,6 +89,8 @@ public class MainActivity extends AppCompatActivity {
 
         // creation et enregistrement du gestionaire de focus audio
         audioFocusManager = new MyAudioFocusManager(this);
+        // on demande aussi le fus au demmarage de l'activite
+        audioFocusManager.requestAudioFocus();
 
         // activation des boutons de gestion manuelle du focus audio
         bAbandonFocus.setOnClickListener(new View.OnClickListener() {
@@ -199,10 +201,10 @@ public class MainActivity extends AppCompatActivity {
             }
             playlist.addLast(nouveau);
             }
-        // si le 1er element de la playlist n'est pas en cours de lceture
+        // si le 1er element de la playlist n'est pas en cours de lecture
         // on essaye de le lancer (quand c'est possible)
         MediaPlayer mp = playlist.getFirst();
-        if (! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus())){
+        if (! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())){
             System.out.println("starting 1st element");
             mp.start();
         }
@@ -210,10 +212,13 @@ public class MainActivity extends AppCompatActivity {
 
     public void stopAll(){
         System.out.println("stop playlist");
+        //on met en pause
+        this.pauseAll();
+        // et on abandone le focus audio
+        audioFocusManager.abandonAudioFocus();
+        // on libere les elements de la playlist
         for (MediaPlayer son : playlist ){
             if (son != null){
-                son.pause();
-                son.seekTo(0);
                 // on libere les resources associes au mediaplayer
                 son.release();
             }
