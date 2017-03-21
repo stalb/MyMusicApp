@@ -141,9 +141,9 @@ public class MainActivity extends AppCompatActivity {
     public void playOrStop(int i){
         if (mps[ i-1] != null) {
             if ( ! mps[i-1].isPlaying()){
-                // avant de demarrer le son on verifie
-                // si c'est possible
-                if (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus()){
+                // avant de demarrer le son on verifie si c'est possible
+                // ou on demande le focus audio
+                if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()){
                     System.out.println("play "+i);
                     mps[i-1].start();
                 } else {
