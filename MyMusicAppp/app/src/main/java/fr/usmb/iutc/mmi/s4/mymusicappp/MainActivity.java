@@ -213,12 +213,14 @@ public class MainActivity extends AppCompatActivity {
                     dernier.setNextMediaPlayer(nouveau);
                 }
                 playlist.addLast(nouveau);
+            } else {
+                System.out.println("Resource: " + uris[i-1] + " non accessible !!");
             }
         }
         // si le 1er element de la playlist n'est pas en cours de lecture
         // on essaye de le lancer (quand c'est possible)
-        MediaPlayer mp = playlist.getFirst();
-        if (! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())){
+        MediaPlayer mp = playlist.peekFirst();
+        if (mp != null && ! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())){
             System.out.println("starting 1st element");
             mp.start();
         }
