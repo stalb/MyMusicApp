@@ -16,7 +16,6 @@ import android.view.View;
 import android.widget.Button;
 
 import java.io.File;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -89,8 +88,6 @@ public class MainActivity extends AppCompatActivity {
 
         // creation et enregistrement du gestionaire de focus audio
         audioFocusManager = new MyAudioFocusManager(this);
-        // on demande aussi le fus au demmarage de l'activite
-        audioFocusManager.requestAudioFocus();
 
         // activation des boutons de gestion manuelle du focus audio
         bAbandonFocus.setOnClickListener(new View.OnClickListener() {
@@ -118,25 +115,31 @@ public class MainActivity extends AppCompatActivity {
         // association avec le boution 1
         uris[0] = uri1;
         //b1.setText("Les cornichons");
-        this.setButtonTitleAsync(1,uri1);
+        this.setButtonTitle(1, uri1);
 
         // recuperation d'un fichier audio externe
         // remarque il faut penser a ajouter la permission READ_EXTERNAL_STORAGE dans  AndroidManifest.xml
         File son2 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
                 "mp3/Adele/25/01 - Hello.mp3");
         System.out.println("Son2 : " + son2);
-        // transformation en URI et creation du mediaplayer, puis association avec le bouton 2
-        Uri uri2 = Uri.fromFile(son2);
-        System.out.println("Uri2 : " + uri2);
-        uris[1] = uri2;
-        this.setButtonTitleAsync(2, uri2);
+        // ontexte si le fichier existe sinon on risque d'avir un pb
+        if (son2.exists() && son2.canRead()){
+            // transformation en URI et creation du mediaplayer, puis association avec le bouton 2
+            Uri uri2 = Uri.fromFile(son2);
+            System.out.println("Uri2 : " + uri2);
+            uris[1] = uri2;
+            //b3.setText("Hello / Adele");
+            this.setButtonTitle(2, uri2);
+        }
 
         // recuperation d'un flux sonnore sur internet
         // et association avec le bouton 3
         // RQ : il est necessaire d'ajouter la permission INTERNET dans AndroidManifest.xml
         Uri uri3 = Uri.parse("http://audionautix.com/Music/TexasTechno.mp3");
         uris[2] = uri3;
-        this.setButtonTitleAsync(3, uri3);
+        //b3.setText("Texas Techno / audionautix.com");
+        this.setButtonTitle(3, "Texas Techno / audionautix.com");
+        // this.setButtonTitle(3, uri3);
     }
 
     @Override
@@ -145,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
             Uri uri = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
             if (uri != null) {
                 this.setSon(requestCode, uri);
-                this.setButtonTitleAsync(requestCode, uri);
+                this.setButtonTitle(requestCode, uri);
             }
         }
     }
@@ -155,46 +158,34 @@ public class MainActivity extends AppCompatActivity {
         uris[id-1] = uri;
     }
 
+    public void setButtonTitle(final int id,final String title) {
+        if (title != null){
+            switch (id){
+                case 1 : ((Button) MainActivity.this.findViewById(R.id.button1)).setText(title); break;
+                case 2 : ((Button) MainActivity.this.findViewById(R.id.button2)).setText(title); break;
+                case 3 : ((Button) MainActivity.this.findViewById(R.id.button3)).setText(title); break;
+                case 4 : ((Button) MainActivity.this.findViewById(R.id.button4)).setText(title); break;
+                case 5 : ((Button) MainActivity.this.findViewById(R.id.button5)).setText(title); break;
+                case 6 : ((Button) MainActivity.this.findViewById(R.id.button6)).setText(title); break;
+            }
+        }
+    }
+
     public void setButtonTitle(final int id,final Uri uri){
         System.out.println("URI : "+uri.toString());
         MediaMetadataRetriever dataManager = new MediaMetadataRetriever();
+        String title = "inconnu";
         if ("file".equalsIgnoreCase(uri.getScheme())
                 || "content".equalsIgnoreCase(uri.getScheme())
                 || ContentResolver.SCHEME_ANDROID_RESOURCE.equalsIgnoreCase(uri.getScheme())) {
             dataManager.setDataSource(this, uri);
+            String trackTitle = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+            String trackAuthor = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+            title = ((trackTitle != null) ? trackTitle : "inconnu" )+ " / " + ((trackAuthor != null) ? trackAuthor : "inconnu" );
         } else {
-            dataManager.setDataSource(uri.toString(), new HashMap<String, String>());
+            title = uri.getLastPathSegment();
         }
-        String trackTitle = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
-        String trackAuthor = dataManager.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
-        final String title = ((trackTitle != null) ? trackTitle : "inconnu" )+ " / " + ((trackAuthor != null) ? trackAuthor : "inconnu" );
-        // la mise a jour du titre des bouton doit se faire dans le thread d'interface utilisateur
-        this.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (title != null){
-                    switch (id){
-                        case 1 : ((Button) MainActivity.this.findViewById(R.id.button1)).setText(title); break;
-                        case 2 : ((Button) MainActivity.this.findViewById(R.id.button2)).setText(title); break;
-                        case 3 : ((Button) MainActivity.this.findViewById(R.id.button3)).setText(title); break;
-                        case 4 : ((Button) MainActivity.this.findViewById(R.id.button4)).setText(title); break;
-                        case 5 : ((Button) MainActivity.this.findViewById(R.id.button5)).setText(title); break;
-                        case 6 : ((Button) MainActivity.this.findViewById(R.id.button6)).setText(title); break;
-                    }
-                }
-            }
-        });
-    }
-
-    // mise a jour du titre du bouton via le pool de thread
-    public void setButtonTitleAsync(final int i, final Uri uri){
-        Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                setButtonTitle(i, uri);
-            }
-        };
-        backgroundThread.execute(task);
+        this.setButtonTitle(id, title);
     }
 
     public Uri getSon(int id){
@@ -203,36 +194,51 @@ public class MainActivity extends AppCompatActivity {
 
     public void addToPlaylist(int i){
         // si l'URI n'est pas null on cree le mediaplayer correspondant
-        // puis on l'ajoute dans a la fin de la playlist
+        // puis on l'ajoute dans a la fin de la playlist en arriere plan
         if (uris[i-1] != null) {
-            MediaPlayer nouveau = MediaPlayer.create(this, uris[i-1]);
-            // association au MediaPlyer.OnCompletionListener pour savoir quand le morceau est termine
-            nouveau.setOnCompletionListener(onCompletionListener);
-            // si on est en mode bas niveau sonore, on l'applique au nouveau mediaplayer
-            if (audioFocusManager.canDuck()) {
-                nouveau.setVolume(0.2f, 0.2f);
+            this.addToPlaylistAsync(uris[i-1]);
+        }
+    }
+
+    public void addToPlaylist(Uri uri){
+        // si l'URI n'est pas null on cree le mediaplayer correspondant
+        // puis on l'ajoute dans a la fin de la playlist
+        if (uri != null) {
+            MediaPlayer nouveau = MediaPlayer.create(this, uri);
+            // si la resource n'est pas eccessible, nouveau peut etre nul !
+            if (nouveau != null ) {
+                // association au MediaPlyer.OnCompletionListener pour savoir quand le morceau est termine
+                nouveau.setOnCompletionListener(onCompletionListener);
+                // si on est en mode bas niveau sonore, on l'applique au nouveau mediaplayer
+                if (audioFocusManager.canDuck()) {
+                    nouveau.setVolume(0.2f, 0.2f);
                 }
-            MediaPlayer dernier = playlist.peekLast();
-            if (dernier != null) {
-                dernier.setNextMediaPlayer(nouveau);
+                MediaPlayer dernier = playlist.peekLast();
+                if (dernier != null) {
+                    dernier.setNextMediaPlayer(nouveau);
+                }
+                playlist.addLast(nouveau);
+            } else {
+                System.out.println("Resource: " + uri + " non accessible !!");
             }
-            playlist.addLast(nouveau);
-            }
+        }
         // si le 1er element de la playlist n'est pas en cours de lecture
         // on essaye de le lancer (quand c'est possible)
-        MediaPlayer mp = playlist.getFirst();
-        if (! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())){
+        MediaPlayer mp = playlist.peekFirst();
+        if (mp != null && ! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())){
             System.out.println("starting 1st element");
             mp.start();
         }
     }
 
     // ajout dans la playlist en utilisant le pool de thread
-    public void addToPlaylistAsync(final int i){
+    public void addToPlaylistAsync(final Uri uri){
+        // avant d'ajouter le morceau on demande si necessaire le focus audio
+        if (! (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())) audioFocusManager.requestAudioFocus();
         Runnable task = new Runnable() {
             @Override
             public void run() {
-                addToPlaylist(i);
+                addToPlaylist(uri);
             }
         };
         backgroundThread.execute(task);
