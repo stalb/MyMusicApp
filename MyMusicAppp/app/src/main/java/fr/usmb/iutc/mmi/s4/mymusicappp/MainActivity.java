@@ -16,7 +16,6 @@ import android.view.View;
 import android.widget.Button;
 
 import java.io.File;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -89,8 +88,6 @@ public class MainActivity extends AppCompatActivity {
 
         // creation et enregistrement du gestionaire de focus audio
         audioFocusManager = new MyAudioFocusManager(this);
-        // on demande aussi le fus au demmarage de l'activite
-        audioFocusManager.requestAudioFocus();
 
         // activation des boutons de gestion manuelle du focus audio
         bAbandonFocus.setOnClickListener(new View.OnClickListener() {
@@ -197,9 +194,17 @@ public class MainActivity extends AppCompatActivity {
 
     public void addToPlaylist(int i){
         // si l'URI n'est pas null on cree le mediaplayer correspondant
-        // puis on l'ajoute dans a la fin de la playlist
+        // puis on l'ajoute dans a la fin de la playlist en arriere plan
         if (uris[i-1] != null) {
-            MediaPlayer nouveau = MediaPlayer.create(this, uris[i-1]);
+            this.addToPlaylistAsync(uris[i-1]);
+        }
+    }
+
+    public void addToPlaylist(Uri uri){
+        // si l'URI n'est pas null on cree le mediaplayer correspondant
+        // puis on l'ajoute dans a la fin de la playlist
+        if (uri != null) {
+            MediaPlayer nouveau = MediaPlayer.create(this, uri);
             // si la resource n'est pas eccessible, nouveau peut etre nul !
             if (nouveau != null ) {
                 // association au MediaPlyer.OnCompletionListener pour savoir quand le morceau est termine
@@ -214,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 playlist.addLast(nouveau);
             } else {
-                System.out.println("Resource: " + uris[i-1] + " non accessible !!");
+                System.out.println("Resource: " + uri + " non accessible !!");
             }
         }
         // si le 1er element de la playlist n'est pas en cours de lecture
@@ -227,11 +232,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // ajout dans la playlist en utilisant le pool de thread
-    public void addToPlaylistAsync(final int i){
+    public void addToPlaylistAsync(final Uri uri){
+        // avant d'ajouter le morceau on demande si necessaire le focus audio
+        if (! (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())) audioFocusManager.requestAudioFocus();
         Runnable task = new Runnable() {
             @Override
             public void run() {
-                addToPlaylist(i);
+                addToPlaylist(uri);
             }
         };
         backgroundThread.execute(task);
