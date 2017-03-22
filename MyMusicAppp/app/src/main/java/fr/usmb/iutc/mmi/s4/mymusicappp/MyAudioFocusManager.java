@@ -5,13 +5,13 @@ import android.media.AudioManager;
 
 public class MyAudioFocusManager  implements AudioManager.OnAudioFocusChangeListener{
 
-    private MainActivity myActivity;
+    private MyAudioService audioService;
     private int audioState = AudioManager.AUDIOFOCUS_LOSS;
     private AudioManager audioManager ;
 
-    public MyAudioFocusManager(MainActivity myActivity) {
-        this.myActivity = myActivity;
-        audioManager = (AudioManager)myActivity.getSystemService(Context.AUDIO_SERVICE);
+    public MyAudioFocusManager(MyAudioService audioService) {
+        this.audioService = audioService;
+        audioManager = (AudioManager)audioService.getSystemService(Context.AUDIO_SERVICE);
     }
 
     @Override
@@ -20,17 +20,17 @@ public class MyAudioFocusManager  implements AudioManager.OnAudioFocusChangeList
         System.out.println("AudioFocus changed: "+i);
         switch (i) {
             case AudioManager.AUDIOFOCUS_LOSS :
-                myActivity.pauseAll();
+                audioService.pauseAll();
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT :
-                myActivity.pauseAll();
+                audioService.pauseAll();
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK :
-                myActivity.duckAll();
+                audioService.duckAll();
                 break;
             case AudioManager.AUDIOFOCUS_GAIN :
-                myActivity.unduckAll();
-                myActivity.restart();
+                audioService.unduckAll();
+                audioService.restart();
                 break;
         }
     }
@@ -52,7 +52,7 @@ public class MyAudioFocusManager  implements AudioManager.OnAudioFocusChangeList
         int res = audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
         if (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED){
             audioState = AudioManager.AUDIOFOCUS_GAIN;
-            myActivity.unduckAll();
+            audioService.unduckAll();
             //myActivity.restart();
         } else {
             audioState = AudioManager.AUDIOFOCUS_LOSS;
@@ -62,7 +62,7 @@ public class MyAudioFocusManager  implements AudioManager.OnAudioFocusChangeList
 
     public void abandonAudioFocus(){
         audioState = AudioManager.AUDIOFOCUS_LOSS;
-        myActivity.pauseAll();
+        audioService.pauseAll();
         audioManager.abandonAudioFocus(this);
     }
 }
