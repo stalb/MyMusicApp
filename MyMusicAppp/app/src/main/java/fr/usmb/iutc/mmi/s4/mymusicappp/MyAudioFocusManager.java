@@ -5,13 +5,13 @@ import android.media.AudioManager;
 
 public class MyAudioFocusManager  implements AudioManager.OnAudioFocusChangeListener{
 
-    private MainActivity myActivity;
+    private MyAudioService myActivity;
     private int audioState = AudioManager.AUDIOFOCUS_LOSS;
     private AudioManager audioManager ;
 
-    public MyAudioFocusManager(MainActivity myActivity) {
-        this.myActivity = myActivity;
-        audioManager = (AudioManager)myActivity.getSystemService(Context.AUDIO_SERVICE);
+    public MyAudioFocusManager(MyAudioService audioService) {
+        this.myActivity = audioService;
+        audioManager = (AudioManager)audioService.getSystemService(Context.AUDIO_SERVICE);
     }
 
     @Override

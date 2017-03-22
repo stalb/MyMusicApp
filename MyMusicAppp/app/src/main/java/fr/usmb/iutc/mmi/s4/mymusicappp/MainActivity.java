@@ -1,42 +1,42 @@
 package fr.usmb.iutc.mmi.s4.mymusicappp;
 
-import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
-import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
-import android.os.Environment;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.IBinder;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 
 import java.io.File;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
-    private BroadcastReceiver noisyBroacastReceiver ;
-    private MyAudioFocusManager audioFocusManager;
-    private LinkedList<MediaPlayer> playlist = new LinkedList<>();
     private Uri[]  uris = new Uri[10];
     private ExecutorService backgroundThread ;
+    private MyAudioService audioService;
+    private Intent serviceIntent ;
 
-    private MediaPlayer.OnCompletionListener onCompletionListener = new MediaPlayer.OnCompletionListener() {
-    @Override
-        public void onCompletion(MediaPlayer mediaPlayer) {
-            // supression du 1er element de la playlist
-            MediaPlayer mp = playlist.pollFirst();
-            // liberation des resources associees au mediaplayer
-            mp.release();
+    // Interface de connexion au service
+    private ServiceConnection myConnectionListener = new ServiceConnection() {
+        // Se déclenche quand l'activité se connecte au service
+        public void onServiceConnected(ComponentName className, IBinder binder) {
+            audioService = ((MyAudioService.MyBinder)binder).getAudioService();
+        }
+        // Se déclenche dès que le service est déconnecté
+        public void onServiceDisconnected(ComponentName className) {
+            audioService = null;
         }
     };
 
@@ -82,30 +82,22 @@ public class MainActivity extends AppCompatActivity {
 
         this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
-        // creation en enregistrement du BroadcastReceiver
-        noisyBroacastReceiver = new MyAudioBroadcastReceiver(this);
-        IntentFilter noisyFilter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
-        this.registerReceiver(noisyBroacastReceiver, noisyFilter);
-
-        // creation et enregistrement du gestionaire de focus audio
-        audioFocusManager = new MyAudioFocusManager(this);
-        // on demande aussi le fus au demmarage de l'activite
-        audioFocusManager.requestAudioFocus();
-
         // activation des boutons de gestion manuelle du focus audio
         bAbandonFocus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                audioFocusManager.abandonAudioFocus();
+                abandonAudioFocus();
             }
         });
         bRequestFocus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                audioFocusManager.requestAudioFocus();
+                requestAudioFocus();
             }
         });
 
+        // creation de l'intent du service
+        serviceIntent = new Intent(this, MyAudioService.class);
         // creation du pool de thread pour les taches en arriere plan (1 seul thread)
         backgroundThread = Executors.newSingleThreadExecutor();
 
@@ -125,11 +117,16 @@ public class MainActivity extends AppCompatActivity {
         File son2 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
                 "mp3/Adele/25/01 - Hello.mp3");
         System.out.println("Son2 : " + son2);
-        // transformation en URI et creation du mediaplayer, puis association avec le bouton 2
-        Uri uri2 = Uri.fromFile(son2);
-        System.out.println("Uri2 : " + uri2);
-        uris[1] = uri2;
-        this.setButtonTitleAsync(2, uri2);
+        if (son2.exists()) {
+            // transformation en URI et creation du mediaplayer, puis association avec le bouton 2
+            Uri uri2 = Uri.fromFile(son2);
+            System.out.println("Uri2 : " + uri2);
+            uris[1] = uri2;
+            b2.setText("Hello");
+            this.setButtonTitleAsync(2, uri2);
+        } else {
+            System.out.println("erreur: "+son2 + " non existant !!!");
+        }
 
         // recuperation d'un flux sonnore sur internet
         // et association avec le bouton 3
@@ -201,101 +198,43 @@ public class MainActivity extends AppCompatActivity {
         return uris[id-1];
     }
 
-    public void addToPlaylist(int i){
-        // si l'URI n'est pas null on cree le mediaplayer correspondant
-        // puis on l'ajoute dans a la fin de la playlist
+    public void addToPlaylistAsync(int i){
+        // on verifie que le service est bien lance
+        this.startService(serviceIntent);
+        // si l'URI n'est pas null on l'ajoute dans a la fin de la playlist
         if (uris[i-1] != null) {
-            MediaPlayer nouveau = MediaPlayer.create(this, uris[i-1]);
-            // association au MediaPlyer.OnCompletionListener pour savoir quand le morceau est termine
-            nouveau.setOnCompletionListener(onCompletionListener);
-            // si on est en mode bas niveau sonore, on l'applique au nouveau mediaplayer
-            if (audioFocusManager.canDuck()) {
-                nouveau.setVolume(0.2f, 0.2f);
-                }
-            MediaPlayer dernier = playlist.peekLast();
-            if (dernier != null) {
-                dernier.setNextMediaPlayer(nouveau);
-            }
-            playlist.addLast(nouveau);
-            }
-        // si le 1er element de la playlist n'est pas en cours de lecture
-        // on essaye de le lancer (quand c'est possible)
-        MediaPlayer mp = playlist.getFirst();
-        if (! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())){
-            System.out.println("starting 1st element");
-            mp.start();
+            this.addToPlaylistAsync(uris[i-1]);
         }
+     }
+
+    public void pauseAll() {
+        audioService.pauseAll();
     }
 
-    // ajout dans la playlist en utilisant le pool de thread
-    public void addToPlaylistAsync(final int i){
-        Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                addToPlaylist(i);
-            }
-        };
-        backgroundThread.execute(task);
+    public void restart() {
+        audioService.restart();
     }
 
-    public void stopAll(){
-        System.out.println("stop playlist");
-        //on met en pause
-        this.pauseAll();
-        // et on abandone le focus audio
-        audioFocusManager.abandonAudioFocus();
-        // on libere les elements de la playlist
-        for (MediaPlayer son : playlist ){
-            if (son != null){
-                // on libere les resources associes au mediaplayer
-                son.release();
-            }
-        }
-        // on vide la playlist
-        playlist.clear();
+    public void stopAll() {
+        audioService.stopAll();
+    }
 
+    public void abandonAudioFocus() {
+        audioService.abandonAudioFocus();
     }
-    public void pauseAll(){
-        System.out.println("pause playlist");
-        for (MediaPlayer son : playlist ){
-            if (son != null && son.isPlaying()){
-                son.pause();
-            }
-        }
+
+    public boolean requestAudioFocus() {
+        return audioService.requestAudioFocus();
     }
-    public void duckAll(){
-        System.out.println("duck all");
-        for (MediaPlayer son : playlist ){
-            if (son != null ){
-                son.setVolume(0.2f, 0.2f);
-            }
-        }
-    }
-    public void unduckAll(){
-        System.out.println("unduck all");
-        for (MediaPlayer son : playlist ){
-            if (son != null ){
-                son.setVolume(1f, 1f);
-            }
-        }
-    }
-    public void restart(){
-        // avant de relancer la musique on verifie
-        // si on a le focus audio et eventuellement on le demande
-        if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()) {
-            System.out.println("restart playlist");
-            MediaPlayer son = playlist.peekFirst();
-            if (son != null) {
-                son.start();
-            }
-        } else {
-            System.out.println("interdit : pas de focus audio");
-        }
+
+    public void addToPlaylistAsync(Uri uri) {
+        audioService.addToPlaylistAsync(uri);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        bindService(serviceIntent, myConnectionListener, BIND_AUTO_CREATE);
     }
 
     @Override
@@ -306,6 +245,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
+        if (audioService != null){
+            unbindService(myConnectionListener);
+        }
         super.onStop();
     }
 
@@ -319,14 +261,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-        // arret de la playlist
-        this.stopAll();
-        // de-enregistrement du broadcastReceiver
-        this.unregisterReceiver(noisyBroacastReceiver);
-
-        // avant de quiter on abandonne le focus audio
-        audioFocusManager.abandonAudioFocus();
 
         super.onDestroy();
     }
