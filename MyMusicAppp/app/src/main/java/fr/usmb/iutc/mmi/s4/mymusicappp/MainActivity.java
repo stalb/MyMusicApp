@@ -1,15 +1,18 @@
 package fr.usmb.iutc.mmi.s4.mymusicappp;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -23,19 +26,18 @@ import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
-    private BroadcastReceiver noisyBroacastReceiver ;
-    private MyAudioFocusManager audioFocusManager;
-    private LinkedList<MediaPlayer> playlist = new LinkedList<>();
     private Uri[]  uris = new Uri[10];
-    private ExecutorService backgroundThread ;
+    private MyAudioService audioservice;
+    private ServiceConnection serviceListener = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            MyAudioService.MyAudioBinder binder = (MyAudioService.MyAudioBinder)iBinder;
+            audioservice = binder.getService();
+        }
 
-    private MediaPlayer.OnCompletionListener onCompletionListener = new MediaPlayer.OnCompletionListener() {
-    @Override
-        public void onCompletion(MediaPlayer mediaPlayer) {
-            // supression du 1er element de la playlist
-            MediaPlayer mp = playlist.pollFirst();
-            // liberation des resources associees au mediaplayer
-            mp.release();
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            audioservice = null;
         }
     };
 
@@ -81,30 +83,19 @@ public class MainActivity extends AppCompatActivity {
 
         this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
-        // creation en enregistrement du BroadcastReceiver
-        noisyBroacastReceiver = new MyAudioBroadcastReceiver(this);
-        IntentFilter noisyFilter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
-        this.registerReceiver(noisyBroacastReceiver, noisyFilter);
-
-        // creation et enregistrement du gestionaire de focus audio
-        audioFocusManager = new MyAudioFocusManager(this);
-
         // activation des boutons de gestion manuelle du focus audio
         bAbandonFocus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                audioFocusManager.abandonAudioFocus();
+                audioservice.abandonAudioFocus();
             }
         });
         bRequestFocus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                audioFocusManager.requestAudioFocus();
+                audioservice.requestAudioFocus();
             }
         });
-
-        // creation du pool de thread pour les taches en arriere plan (1 seul thread)
-        backgroundThread = Executors.newSingleThreadExecutor();
 
         // recupertaion de la ressource musicale (resource raw) et
         // creation l'uri qui correspond a lui :
@@ -140,6 +131,24 @@ public class MainActivity extends AppCompatActivity {
         //b3.setText("Texas Techno / audionautix.com");
         this.setButtonTitle(3, "Texas Techno / audionautix.com");
         // this.setButtonTitle(3, uri3);
+    }
+
+    public void pauseAll() {
+        audioservice.pauseAll();
+    }
+
+    public void restart() {
+        audioservice.restart();
+    }
+
+    public void stopAll() {
+        Intent serviceIntent = new Intent(MainActivity.this, MyAudioService.class);
+        stopService(serviceIntent);
+        audioservice.stopAll();
+    }
+
+    public void addToPlaylistAsync(Uri uri) {
+        audioservice.addToPlaylistAsync(uri);
     }
 
     @Override
@@ -200,108 +209,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void addToPlaylist(Uri uri){
-        // si l'URI n'est pas null on cree le mediaplayer correspondant
-        // puis on l'ajoute dans a la fin de la playlist
-        if (uri != null) {
-            MediaPlayer nouveau = MediaPlayer.create(this, uri);
-            // si la resource n'est pas eccessible, nouveau peut etre nul !
-            if (nouveau != null ) {
-                // association au MediaPlyer.OnCompletionListener pour savoir quand le morceau est termine
-                nouveau.setOnCompletionListener(onCompletionListener);
-                // si on est en mode bas niveau sonore, on l'applique au nouveau mediaplayer
-                if (audioFocusManager.canDuck()) {
-                    nouveau.setVolume(0.2f, 0.2f);
-                }
-                MediaPlayer dernier = playlist.peekLast();
-                if (dernier != null) {
-                    dernier.setNextMediaPlayer(nouveau);
-                }
-                playlist.addLast(nouveau);
-            } else {
-                System.out.println("Resource: " + uri + " non accessible !!");
-            }
-        }
-        // si le 1er element de la playlist n'est pas en cours de lecture
-        // on essaye de le lancer (quand c'est possible)
-        MediaPlayer mp = playlist.peekFirst();
-        if (mp != null && ! mp.isPlaying() && (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())){
-            System.out.println("starting 1st element");
-            mp.start();
-        }
-    }
-
-    // ajout dans la playlist en utilisant le pool de thread
-    public void addToPlaylistAsync(final Uri uri){
-        // avant d'ajouter le morceau on demande si necessaire le focus audio
-        if (! (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())) audioFocusManager.requestAudioFocus();
-        Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                addToPlaylist(uri);
-            }
-        };
-        backgroundThread.execute(task);
-    }
-
-    public void stopAll(){
-        System.out.println("stop playlist");
-        //on met en pause
-        this.pauseAll();
-        // et on abandone le focus audio
-        audioFocusManager.abandonAudioFocus();
-        // on libere les elements de la playlist
-        for (MediaPlayer son : playlist ){
-            if (son != null){
-                // on libere les resources associes au mediaplayer
-                son.release();
-            }
-        }
-        // on vide la playlist
-        playlist.clear();
-
-    }
-    public void pauseAll(){
-        System.out.println("pause playlist");
-        for (MediaPlayer son : playlist ){
-            if (son != null && son.isPlaying()){
-                son.pause();
-            }
-        }
-    }
-    public void duckAll(){
-        System.out.println("duck all");
-        for (MediaPlayer son : playlist ){
-            if (son != null ){
-                son.setVolume(0.2f, 0.2f);
-            }
-        }
-    }
-    public void unduckAll(){
-        System.out.println("unduck all");
-        for (MediaPlayer son : playlist ){
-            if (son != null ){
-                son.setVolume(1f, 1f);
-            }
-        }
-    }
-    public void restart(){
-        // avant de relancer la musique on verifie
-        // si on a le focus audio et eventuellement on le demande
-        if (audioFocusManager.canDuck() || audioFocusManager.hasOrRequestAudioFocus()) {
-            System.out.println("restart playlist");
-            MediaPlayer son = playlist.peekFirst();
-            if (son != null) {
-                son.start();
-            }
-        } else {
-            System.out.println("interdit : pas de focus audio");
-        }
-    }
-
     @Override
     protected void onStart() {
         super.onStart();
+        Intent serviceIntent = new Intent(this, MyAudioService.class);
+        this.startService(serviceIntent);
+        this.bindService(serviceIntent, serviceListener, BIND_AUTO_CREATE);
     }
 
     @Override
@@ -312,28 +225,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
+        this.unbindService(serviceListener);
         super.onStop();
     }
 
     @Override
     protected void onDestroy() {
-        // arret du pool de thread
-        backgroundThread.shutdownNow();
-        try {
-            // on attend l'arret effectif du poll de thread
-            backgroundThread.awaitTermination(2000, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        // arret de la playlist
-        this.stopAll();
-        // de-enregistrement du broadcastReceiver
-        this.unregisterReceiver(noisyBroacastReceiver);
-
-        // avant de quiter on abandonne le focus audio
-        audioFocusManager.abandonAudioFocus();
-
         super.onDestroy();
     }
 }

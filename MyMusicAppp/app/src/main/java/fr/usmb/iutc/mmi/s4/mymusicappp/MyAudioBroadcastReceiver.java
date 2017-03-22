@@ -10,16 +10,16 @@ import android.media.AudioManager;
  */
 
 public class MyAudioBroadcastReceiver extends BroadcastReceiver {
-    private MainActivity app;
+    private MyAudioService audioService;
 
-    public MyAudioBroadcastReceiver (MainActivity a){
-        app = a;
+    public MyAudioBroadcastReceiver (MyAudioService s){
+        audioService = s;
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
         if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())){
-            app.pauseAll();
+            audioService.pauseAll();
         }
     }
 }
