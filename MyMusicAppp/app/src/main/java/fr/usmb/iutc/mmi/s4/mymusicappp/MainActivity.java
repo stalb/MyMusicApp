@@ -125,18 +125,22 @@ public class MainActivity extends AppCompatActivity {
         File son2 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
                 "mp3/Adele/25/01 - Hello.mp3");
         System.out.println("Son2 : " + son2);
-        // transformation en URI et creation du mediaplayer, puis association avec le bouton 2
-        Uri uri2 = Uri.fromFile(son2);
-        System.out.println("Uri2 : " + uri2);
-        uris[1] = uri2;
-        this.setButtonTitleAsync(2, uri2);
+        // ontexte si le fichier existe sinon on risque d'avir un pb
+        if (son2.exists() && son2.canRead()){
+            // transformation en URI et creation du mediaplayer, puis association avec le bouton 2
+            Uri uri2 = Uri.fromFile(son2);
+            System.out.println("Uri2 : " + uri2);
+            uris[1] = uri2;
+            this.setButtonTitle(2, uri2);
+        }
 
         // recuperation d'un flux sonnore sur internet
         // et association avec le bouton 3
         // RQ : il est necessaire d'ajouter la permission INTERNET dans AndroidManifest.xml
         Uri uri3 = Uri.parse("http://audionautix.com/Music/TexasTechno.mp3");
         uris[2] = uri3;
-        this.setButtonTitleAsync(3, uri3);
+        //this.setButtonTitleAsync(3, uri3);
+        b3.setText("Texas Techno / audionautix.com");
     }
 
     @Override
