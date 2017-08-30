@@ -84,18 +84,8 @@ public class MainActivity extends AppCompatActivity {
         this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
         // activation des boutons de gestion manuelle du focus audio
-        bAbandonFocus.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                audioservice.abandonAudioFocus();
-            }
-        });
-        bRequestFocus.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                audioservice.requestAudioFocus();
-            }
-        });
+        bAbandonFocus.setOnClickListener((View view) -> {audioservice.abandonAudioFocus();});
+        bRequestFocus.setOnClickListener(view -> { audioservice.requestAudioFocus();});
 
         // recupertaion de la ressource musicale (resource raw) et
         // creation l'uri qui correspond a lui :

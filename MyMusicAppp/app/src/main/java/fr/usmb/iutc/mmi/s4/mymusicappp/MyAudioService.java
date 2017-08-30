@@ -29,7 +29,7 @@ public class MyAudioService extends Service {
     private PendingIntent notificationIntent;
     private Notification notification;
 
-    private MediaPlayer.OnCompletionListener onCompletionListener = new MediaPlayer.OnCompletionListener() {
+    private MediaPlayer.OnCompletionListener onCompletionListener0 = new MediaPlayer.OnCompletionListener() {
         @Override
         public void onCompletion(MediaPlayer mediaPlayer) {
             // supression du 1er element de la playlist
@@ -40,6 +40,17 @@ public class MyAudioService extends Service {
                 stopForeground(true);
                 stopSelf();
             }
+        }
+    };
+
+    private MediaPlayer.OnCompletionListener onCompletionListener = (mediaPlayer)->{
+        // supression du 1er element de la playlist
+        MediaPlayer mp = playlist.pollFirst();
+        // liberation des resources associees au mediaplayer
+        mp.release();
+        if (playlist.isEmpty()) {
+            stopForeground(true);
+            stopSelf();
         }
     };
 
@@ -108,13 +119,7 @@ public class MyAudioService extends Service {
     public void addToPlaylistAsync(final Uri uri){
         // avant d'ajouter le morceau on demande si necessaire le focus audio
         if (! (audioFocusManager.canDuck() || audioFocusManager.hasAudioFocus())) audioFocusManager.requestAudioFocus();
-        Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                addToPlaylist(uri);
-            }
-        };
-        backgroundThread.execute(task);
+        backgroundThread.execute(()-> addToPlaylist(uri));
     }
 
     public void stopAll(){
